@@ -10,6 +10,7 @@
 #define SCREEN_WIDTH 1500
 #define SCREEN_HEIGHT 500
 #define BUFSIZE 512
+#define DEPTH -75.0f
 
 // truth table for exclusive or
 double input[4][3] = {
@@ -98,7 +99,7 @@ void draw_net(int mode) {
 				glPushName(i*HIDDENS+h);
 			glBegin(GL_LINES);
 				rt = sqrt(INPUTS);
-				glVertex3f(((i%rt)*10.0f)-((rt-1)*5.0f), 10.0f, 10.0f*(i/rt)-(rt-1)*5.0f);
+				glVertex3f(((i%rt)*10.0f)-((rt-1)*5.0f), 10.0f, DEPTH+10.0f*(i/rt)-(rt-1)*5.0f);
 				glVertex3f((h * 10.0f) - ((HIDDENS-1) * 5.0f), 0.0f, -75.0f);
 			glEnd();
 			if (mode == GL_SELECT)

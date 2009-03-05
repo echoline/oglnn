@@ -1,8 +1,8 @@
 #ifndef NNWORK
 #define NNWORK
-#include <cmath>
-#include <cstdlib>
-#include <cstdio>
+#include <math.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 #ifndef INPUTS
 	#define INPUTS 2
