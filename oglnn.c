@@ -24,7 +24,8 @@ float positive[] = {0.0f, 0.0f, 1.0f, 1.0f};
 double lambda = 1, rate = 0.25;
 int speed = 1;
 int counter = 0;
-GLubyte keys[256];
+int mx, my;
+float angleX = 10, angleY = 10;
 
 void
 draw_text(GLint x, GLint y, char* s, GLfloat r, GLfloat g, GLfloat b)
@@ -72,8 +73,8 @@ void processHits(GLint hits, GLuint buffer[])
 		//farthest first to closest last		
 		y = buffer[3];
 		if (y >= INPUTS*HIDDENS) {
-			o = 0;
-			h = y - INPUTS*HIDDENS;
+			h = (y - INPUTS*HIDDENS) % HIDDENS;
+			o = (y - INPUTS*HIDDENS) / HIDDENS;
 			ho_weights[h][o] = 0.0/0.0;
 		} else {
 			i = y / HIDDENS;
@@ -86,6 +87,11 @@ void processHits(GLint hits, GLuint buffer[])
 void draw_net(int mode) {
 	int i, h, o, id = 0, rt;
 	// input to hidden
+	glPushMatrix();
+	glTranslatef(0,0,DEPTH);
+	glRotatef(angleX, 0, 1, 0);
+	glRotatef(angleY, 1, 0, 0);
+	
 	for (i = 0; i < INPUTS; i++) {
 		for (h = 0; h < HIDDENS; h++) {
 			if (!isnormal(ih_weights[i][h]))
@@ -99,8 +105,9 @@ void draw_net(int mode) {
 				glPushName(i*HIDDENS+h);
 			glBegin(GL_LINES);
 				rt = sqrt(INPUTS);
-				glVertex3f(((i%rt)*10.0f)-((rt-1)*5.0f), 10.0f, DEPTH+10.0f*(i/rt)-(rt-1)*5.0f);
-				glVertex3f((h * 10.0f) - ((HIDDENS-1) * 5.0f), 0.0f, -75.0f);
+				glVertex3f(((i%rt)*10.0f)-((rt-1)*5.0f), 10.0f, 10.0f*(i/rt)-(rt-1)*5.0f);
+				rt = sqrt(HIDDENS);
+				glVertex3f(((h%rt)*10.0f)-((rt-1)*5.0f), 0.0f, 10.0f*(h/rt)-(rt-1)*5.0f);
 			glEnd();
 			if (mode == GL_SELECT)
 				glPopName();
@@ -119,8 +126,10 @@ void draw_net(int mode) {
 			if (mode == GL_SELECT)
 				glPushName(INPUTS*HIDDENS+o*HIDDENS+h);
 			glBegin(GL_LINES);
-				glVertex3f((h * 10.0f) - (HIDDENS * 5.0f - 5.0), 0.0f, -75.0f);
-				glVertex3f((o * 10.0f) - (OUTPUTS * 5.0f - 5.0), -10.0f, -75.0f);
+				rt = sqrt(OUTPUTS);
+				glVertex3f(((o%rt)*10.0f)-((rt-1)*5.0f), -10.0f, 10.0f*(o/rt)-(rt-1)*5.0f);
+				rt = sqrt(HIDDENS);
+				glVertex3f(((h%rt)*10.0f)-((rt-1)*5.0f), 0.0f, 10.0f*(h/rt)-(rt-1)*5.0f);
 			glEnd();
 			if (mode == GL_SELECT)
 				glPopName();
@@ -129,29 +138,32 @@ void draw_net(int mode) {
 	glMaterialfv(GL_FRONT, GL_EMISSION, neuron);
 
 	// input nodes
+	rt = sqrt(INPUTS);
 	for (i = 0; i < INPUTS; i++) {
 		glPushMatrix();
-		glTranslatef((i * 10.0f) - ((INPUTS - 1) * 5.0f), 10.0f, -75.0f);
+		glTranslatef(((i%rt)*10.0f)-((rt-1)*5.0f), -10.0f, 10.0f*(i/rt)-(rt-1)*5.0f);
 		glutSolidSphere(1,20,20);
 		glPopMatrix();
 	}
 
 	// hidden nodes
+	rt = sqrt(HIDDENS);
 	for (h = 0; h < HIDDENS; h++) {
 		glPushMatrix();
-		glTranslatef((h * 10.0f) - (HIDDENS * 5.0f - 5.0), 0.0f, -75.0f);
+		glTranslatef(((h%rt)*10.0f)-((rt-1)*5.0f), 0.0f, 10.0f*(h/rt)-(rt-1)*5.0f);
 		glutSolidSphere(1,20,20);
 		glPopMatrix();
 	}
 
 	// output nodes
+	rt = sqrt(OUTPUTS);
 	for (o = 0; o < OUTPUTS; o++) {
 		glPushMatrix();
-		glTranslatef((o * 10.0f) - (OUTPUTS * 5.0f - 5.0), -10.0f, -75.0f);
+		glTranslatef(((o%rt)*10.0f)-((rt-1)*5.0f), 10.0f, 10.0f*(o/rt)-(rt-1)*5.0f);
 		glutSolidSphere(1,20,20);
 		glPopMatrix();
 	}
-
+	glPopMatrix();
 }
 
 void kbd(unsigned char key, int x, int y)
@@ -180,12 +192,7 @@ void kbd(unsigned char key, int x, int y)
 	}
 }
 
-void kbdup(unsigned char key, int x, int y)
-{
-        keys[key] = 0;
-}
-
-void mousebuttonfunc(int button, int state, int x, int y)
+void mbutton(int button, int state, int x, int y)
 {
 	GLuint selectBuf[BUFSIZE];//create the selection buffer
 	GLint hits;
@@ -215,6 +222,12 @@ void mousebuttonfunc(int button, int state, int x, int y)
 		processHits (hits, selectBuf);//check for object selection
 		glutPostRedisplay();
 	}
+}
+
+void mmove(int x, int y) {
+	angleX = (x - mx) * (180.0f/SCREEN_WIDTH);
+	angleY = (y - my) * (180.0f/SCREEN_HEIGHT);
+	glutPostRedisplay();
 }
 
 void display(void) {
@@ -274,9 +287,9 @@ int main(int argc, char **argv) {
 	glutReshapeFunc(resize);
 	glutDisplayFunc(display);
 	glutIdleFunc(display);
-	glutMouseFunc(mousebuttonfunc);
+	glutMouseFunc(mbutton);
+	glutMotionFunc(mmove);
 	glutKeyboardFunc(kbd);
-        glutKeyboardUpFunc(kbdup);
 
 	// antialiasing
 	glEnable(GL_LINE_SMOOTH);
