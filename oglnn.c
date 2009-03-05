@@ -3,11 +3,11 @@
 #include <unistd.h>
 #include <time.h>
 #include <string.h>
-#define INPUTS 25 
-#define HIDDENS 25
-#define OUTPUTS 25
+#define INPUTS 9
+#define HIDDENS 9
+#define OUTPUTS 9
 #include "nnwork.h"
-#define SCREEN_WIDTH 1500
+#define SCREEN_WIDTH 500
 #define SCREEN_HEIGHT 500
 #define BUFSIZE 512
 #define DEPTH -75.0f
@@ -19,8 +19,8 @@ double input[4][3] = {
 	{ 1.0, 1.0, 0.0 }, 
 	{ 0.0, 0.0, 0.0 } };
 float neuron[] = {0.0f, 0.1f, 0.1f, 1.0f};
-float negative[] = {0.0f, 1.0f, 0.0f, 1.0f};
-float positive[] = {0.0f, 0.0f, 1.0f, 1.0f};
+float negative[] = {0.0f, 0.7f, 0.0f, 1.0f};
+float positive[] = {0.0f, 0.0f, 0.7f, 1.0f};
 double lambda = 1, rate = 0.25;
 int speed = 1;
 int counter = 0;
@@ -42,6 +42,7 @@ draw_text(GLint x, GLint y, char* s, GLfloat r, GLfloat g, GLfloat b)
 	glPushMatrix();
 	glLoadIdentity();
 	glColor3f(r,g,b);
+	glMaterialfv(GL_FRONT, GL_EMISSION, positive);
 	glRasterPos2i(x, y);
 	for(p = s, lines = 0; *p; p++) {
 		if (*p == '\n') {
@@ -60,17 +61,10 @@ draw_text(GLint x, GLint y, char* s, GLfloat r, GLfloat g, GLfloat b)
 void processHits(GLint hits, GLuint buffer[])
 {
 	int y = 0, i, h, o;
-	//unselect all
-	for(int j = 0; j < 4; j++) 
-	{		
-		//cube[j].selected = false;
-	}        
 	if(hits > 0)//Make sure there is at least one hit
 	{
 		//The 4th spot, array index 3, is the top of the stack, 
 		//which holds the id of the last item that was drawn to the place we clicked on
-		//The last item would be the one closest to us since items are drawn 
-		//farthest first to closest last		
 		y = buffer[3];
 		if (y >= INPUTS*HIDDENS) {
 			h = (y - INPUTS*HIDDENS) % HIDDENS;
@@ -84,7 +78,7 @@ void processHits(GLint hits, GLuint buffer[])
 	}      
 }
 
-void draw_net(int mode) {
+void draw_net(int mode, double *input, double *output) {
 	int i, h, o, id = 0, rt;
 	// input to hidden
 	glPushMatrix();
@@ -135,13 +129,14 @@ void draw_net(int mode) {
 				glPopName();
 		}
 	}
-	glMaterialfv(GL_FRONT, GL_EMISSION, neuron);
 
 	// input nodes
 	rt = sqrt(INPUTS);
 	for (i = 0; i < INPUTS; i++) {
+		neuron[0] = input[i];
+		glMaterialfv(GL_FRONT, GL_EMISSION, neuron);
 		glPushMatrix();
-		glTranslatef(((i%rt)*10.0f)-((rt-1)*5.0f), -10.0f, 10.0f*(i/rt)-(rt-1)*5.0f);
+		glTranslatef(((i%rt)*10.0f)-((rt-1)*5.0f), 10.0f, 10.0f*(i/rt)-(rt-1)*5.0f);
 		glutSolidSphere(1,20,20);
 		glPopMatrix();
 	}
@@ -149,6 +144,8 @@ void draw_net(int mode) {
 	// hidden nodes
 	rt = sqrt(HIDDENS);
 	for (h = 0; h < HIDDENS; h++) {
+		neuron[0] = hidden_outputs[h];
+		glMaterialfv(GL_FRONT, GL_EMISSION, neuron);
 		glPushMatrix();
 		glTranslatef(((h%rt)*10.0f)-((rt-1)*5.0f), 0.0f, 10.0f*(h/rt)-(rt-1)*5.0f);
 		glutSolidSphere(1,20,20);
@@ -158,8 +155,10 @@ void draw_net(int mode) {
 	// output nodes
 	rt = sqrt(OUTPUTS);
 	for (o = 0; o < OUTPUTS; o++) {
+		neuron[0] = output[o];
+		glMaterialfv(GL_FRONT, GL_EMISSION, neuron);
 		glPushMatrix();
-		glTranslatef(((o%rt)*10.0f)-((rt-1)*5.0f), 10.0f, 10.0f*(o/rt)-(rt-1)*5.0f);
+		glTranslatef(((o%rt)*10.0f)-((rt-1)*5.0f), -10.0f, 10.0f*(o/rt)-(rt-1)*5.0f);
 		glutSolidSphere(1,20,20);
 		glPopMatrix();
 	}
@@ -214,7 +213,7 @@ void mbutton(int button, int state, int x, int y)
 			gluPickMatrix((GLdouble)x, (GLdouble)(viewport[3]-y), 
 					4.0, 4.0, viewport);
 			gluPerspective(45.0, SCREEN_WIDTH/SCREEN_HEIGHT, 0.1, 1000.0);
-			draw_net(GL_SELECT);// Draw to the pick matrix instead of our normal one
+			draw_net(GL_SELECT, input[0], input[1]);// Draw to the pick matrix instead of our normal one
 			glMatrixMode(GL_PROJECTION);
 		glPopMatrix ();
 		glFlush ();
@@ -238,11 +237,12 @@ void display(void) {
 
 	results = nnwork_train(input[counter%4], &(input[counter%4][2]), rate, lambda);
 	error = pow(input[counter%4][2] - results[0], 2.0);
-	free(results);
 
 	counter++;
-	if (counter % speed)
+	if (counter % speed) {
+		free(results);
 		return;
+	}
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -252,7 +252,8 @@ void display(void) {
 			"1 and 2 adjust speed: %d\n",
 			counter, error, rate, lambda, speed);
 	draw_text(0, 0, hud, 0, 1, 0);
-	draw_net(GL_RENDER);
+	draw_net(GL_RENDER, input[(counter-1)%4], results);
+	free(results);
 
 	glFlush();
 	glutSwapBuffers();
