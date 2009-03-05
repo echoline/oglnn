@@ -3,9 +3,9 @@
 #include <unistd.h>
 #include <time.h>
 #include <string.h>
-#define INPUTS 16
-#define HIDDENS 16
-#define OUTPUTS 5
+#define INPUTS 25 
+#define HIDDENS 25
+#define OUTPUTS 25
 #include "nnwork.h"
 #define SCREEN_WIDTH 1500
 #define SCREEN_HEIGHT 500
@@ -26,7 +26,7 @@ int counter = 0;
 GLubyte keys[256];
 
 void
-DrawText(GLint x, GLint y, char* s, GLfloat r, GLfloat g, GLfloat b)
+draw_text(GLint x, GLint y, char* s, GLfloat r, GLfloat g, GLfloat b)
 {
 	int lines;
 	char* p;
@@ -82,8 +82,8 @@ void processHits(GLint hits, GLuint buffer[])
 	}      
 }
 
-void DrawWeights(int mode) {
-	int i, h, o, id = 0;
+void draw_net(int mode) {
+	int i, h, o, id = 0, rt;
 	// input to hidden
 	for (i = 0; i < INPUTS; i++) {
 		for (h = 0; h < HIDDENS; h++) {
@@ -97,8 +97,9 @@ void DrawWeights(int mode) {
 			if (mode == GL_SELECT)
 				glPushName(i*HIDDENS+h);
 			glBegin(GL_LINES);
-				glVertex3f((i * 10.0f) - ((INPUTS - 1) * 5.0f), 10.0f, -75.0f);
-				glVertex3f((h * 10.0f) - (HIDDENS * 5.0f - 5.0), 0.0f, -75.0f);
+				rt = sqrt(INPUTS);
+				glVertex3f(((i%rt)*10.0f)-((rt-1)*5.0f), 10.0f, 10.0f*(i/rt)-(rt-1)*5.0f);
+				glVertex3f((h * 10.0f) - ((HIDDENS-1) * 5.0f), 0.0f, -75.0f);
 			glEnd();
 			if (mode == GL_SELECT)
 				glPopName();
@@ -124,6 +125,32 @@ void DrawWeights(int mode) {
 				glPopName();
 		}
 	}
+	glMaterialfv(GL_FRONT, GL_EMISSION, neuron);
+
+	// input nodes
+	for (i = 0; i < INPUTS; i++) {
+		glPushMatrix();
+		glTranslatef((i * 10.0f) - ((INPUTS - 1) * 5.0f), 10.0f, -75.0f);
+		glutSolidSphere(1,20,20);
+		glPopMatrix();
+	}
+
+	// hidden nodes
+	for (h = 0; h < HIDDENS; h++) {
+		glPushMatrix();
+		glTranslatef((h * 10.0f) - (HIDDENS * 5.0f - 5.0), 0.0f, -75.0f);
+		glutSolidSphere(1,20,20);
+		glPopMatrix();
+	}
+
+	// output nodes
+	for (o = 0; o < OUTPUTS; o++) {
+		glPushMatrix();
+		glTranslatef((o * 10.0f) - (OUTPUTS * 5.0f - 5.0), -10.0f, -75.0f);
+		glutSolidSphere(1,20,20);
+		glPopMatrix();
+	}
+
 }
 
 void kbd(unsigned char key, int x, int y)
@@ -179,7 +206,7 @@ void mousebuttonfunc(int button, int state, int x, int y)
 			gluPickMatrix((GLdouble)x, (GLdouble)(viewport[3]-y), 
 					4.0, 4.0, viewport);
 			gluPerspective(45.0, SCREEN_WIDTH/SCREEN_HEIGHT, 0.1, 1000.0);
-			DrawWeights(GL_SELECT);// Draw to the pick matrix instead of our normal one
+			draw_net(GL_SELECT);// Draw to the pick matrix instead of our normal one
 			glMatrixMode(GL_PROJECTION);
 		glPopMatrix ();
 		glFlush ();
@@ -210,34 +237,8 @@ void display(void) {
 			"3 and 4 adjust lambda: %f\n"
 			"1 and 2 adjust speed: %d\n",
 			counter, error, rate, lambda, speed);
-	DrawText(0, 0, hud, 0, 1, 0);
-	DrawWeights(GL_RENDER);
-
-	glMaterialfv(GL_FRONT, GL_EMISSION, neuron);
-
-	// input nodes
-	for (i = 0; i < INPUTS; i++) {
-		glPushMatrix();
-		glTranslatef((i * 10.0f) - ((INPUTS - 1) * 5.0f), 10.0f, -75.0f);
-		glutSolidSphere(1,20,20);
-		glPopMatrix();
-	}
-
-	// hidden nodes
-	for (h = 0; h < HIDDENS; h++) {
-		glPushMatrix();
-		glTranslatef((h * 10.0f) - (HIDDENS * 5.0f - 5.0), 0.0f, -75.0f);
-		glutSolidSphere(1,20,20);
-		glPopMatrix();
-	}
-
-	// output nodes
-	for (o = 0; o < OUTPUTS; o++) {
-		glPushMatrix();
-		glTranslatef((o * 10.0f) - (OUTPUTS * 5.0f - 5.0), -10.0f, -75.0f);
-		glutSolidSphere(1,20,20);
-		glPopMatrix();
-	}
+	draw_text(0, 0, hud, 0, 1, 0);
+	draw_net(GL_RENDER);
 
 	glFlush();
 	glutSwapBuffers();

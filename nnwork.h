@@ -1,8 +1,8 @@
 #ifndef NNWORK
 #define NNWORK
-#include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
+#include <cmath>
+#include <cstdlib>
+#include <cstdio>
 
 #ifndef INPUTS
 	#define INPUTS 2
@@ -14,9 +14,16 @@
 	#define OUTPUTS 1
 #endif
 
+// one node for each pair.
+// set to a non-normal double value to disable
+// ie inf, nan
 double ih_weights[INPUTS][HIDDENS];
 double ho_weights[HIDDENS][OUTPUTS];
+// outputs of hidden layer
 double hidden_outputs[HIDDENS];
+// typedef for logistic function so that it can be swapped
+// with a different function.  train() will only work with
+// the default
 typedef double (*sigmoid_func_t)(double,double);
 
 // this is the logistic function.
