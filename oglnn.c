@@ -10,17 +10,19 @@
 #define SCREEN_WIDTH 500
 #define SCREEN_HEIGHT 500
 #define BUFSIZE 512
-#define DEPTH -175.0f
 
-float neuron[] = {0.0f, 0.0f, 0.0f, 0.9f};
+// RGBA colors
+float neuron[] = {0.0f, 0.0f, 0.0f, 1.0f};
 float negative[] = {0.0f, 0.7f, 0.0f, 1.0f};
 float positive[] = {0.0f, 0.0f, 0.7f, 1.0f};
+
 double lambda = 1, rate = 0.25;
 int speed = 1;
 int counter = 0;
 int mx, my;
 float angleX = 10, angleY = 10;
 double input[256], output[10];
+double depth = -175.0f;
 FILE *train;
 
 void
@@ -78,7 +80,7 @@ void draw_net(int mode, double *input, double *output) {
 	int i, h, o, id = 0, rt;
 	// input to hidden
 	glPushMatrix();
-	glTranslatef(0,0,DEPTH);
+	glTranslatef(0,0,depth);
 	glRotatef(angleX, 0, 1, 0);
 	glRotatef(-angleY, 1, 0, 0);
 	
@@ -131,10 +133,9 @@ void draw_net(int mode, double *input, double *output) {
 	for (i = 0; i < INPUTS; i++) {
 		neuron[0] = (-input[i] + 1.0) / 2.0;
 		glMaterialfv(GL_FRONT, GL_EMISSION, neuron);
-		glPushMatrix();
 		glTranslatef(((i%rt)*10.0f)-((rt-1)*5.0f), 10.0f, 10.0f*(i/rt)-(rt-1)*5.0f);
 		glutSolidSphere(1,20,20);
-		glPopMatrix();
+		glTranslatef(((i%rt)*-10.0f)+((rt-1)*5.0f), -10.0f, -10.0f*(i/rt)+(rt-1)*5.0f);
 	}
 
 	// hidden nodes
@@ -142,10 +143,9 @@ void draw_net(int mode, double *input, double *output) {
 	for (h = 0; h < HIDDENS; h++) {
 		neuron[0] = hidden_outputs[h];
 		glMaterialfv(GL_FRONT, GL_EMISSION, neuron);
-		glPushMatrix();
 		glTranslatef(((h%rt)*10.0f)-((rt-1)*5.0f), 0.0f, 10.0f*(h/rt)-(rt-1)*5.0f);
 		glutSolidSphere(1,20,20);
-		glPopMatrix();
+		glTranslatef(((h%rt)*-10.0f)+((rt-1)*5.0f), 0.0f, -10.0f*(h/rt)+(rt-1)*5.0f);
 	}
 
 	// output nodes
@@ -153,10 +153,9 @@ void draw_net(int mode, double *input, double *output) {
 	for (o = 0; o < OUTPUTS; o++) {
 		neuron[0] = output[o];
 		glMaterialfv(GL_FRONT, GL_EMISSION, neuron);
-		glPushMatrix();
 		glTranslatef(((o%rt)*10.0f)-((rt-1)*5.0f), -10.0f, 10.0f*(o/rt)-(rt-1)*5.0f);
 		glutSolidSphere(1,20,20);
-		glPopMatrix();
+		glTranslatef(((o%rt)*-10.0f)+((rt-1)*5.0f), 10.0f, -10.0f*(o/rt)+(rt-1)*5.0f);
 	}
 	glPopMatrix();
 }
@@ -308,10 +307,10 @@ int main(int argc, char **argv) {
 	}
 
 	glutInit(&argc, argv);
-        glutInitWindowPosition(0, 0);
+	glutInitWindowPosition(0, 0);
 	glutInitWindowSize(SCREEN_WIDTH, SCREEN_HEIGHT);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
-        glutCreateWindow("nnwork");
+	glutCreateWindow("nnwork");
 	glutReshapeFunc(resize);
 	glutDisplayFunc(display);
 	glutIdleFunc(display);
@@ -324,7 +323,7 @@ int main(int argc, char **argv) {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 	glHint(GL_LINE_SMOOTH_HINT,GL_NICEST);
-
+	
 	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
 	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
 	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
@@ -335,7 +334,9 @@ int main(int argc, char **argv) {
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
 	glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
 
+	glDepthFunc(GL_LEQUAL);
 	glEnable(GL_DEPTH_TEST);
+
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
 
