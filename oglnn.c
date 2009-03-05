@@ -18,6 +18,7 @@ double input[4][3] = {
 	{ 1.0, 0.0, 1.0 }, 
 	{ 1.0, 1.0, 0.0 }, 
 	{ 0.0, 0.0, 0.0 } };
+double output[9] = { 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5 };
 float neuron[] = {0.0f, 0.1f, 0.1f, 1.0f};
 float negative[] = {0.0f, 0.7f, 0.0f, 1.0f};
 float positive[] = {0.0f, 0.0f, 0.7f, 1.0f};
@@ -235,7 +236,7 @@ void display(void) {
 	double error;
 	int i, h, o;
 
-	results = nnwork_train(input[counter%4], &(input[counter%4][2]), rate, lambda);
+	results = nnwork_train(input[counter%4], output, rate, lambda);
 	error = pow(input[counter%4][2] - results[0], 2.0);
 
 	counter++;
