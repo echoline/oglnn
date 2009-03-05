@@ -21,10 +21,23 @@ int speed = 1;
 int counter = 0;
 int mx, my;
 float angleX = 10, angleY = 10;
-double input[256], output[10];
+double input[INPUTS], output[OUTPUTS];
 int guess;
 double depth = -175.0f;
 FILE *train;
+
+int
+highest_output() {
+	int o, ret = -1;
+	double max = -100;
+	for (o = 0; o < OUTPUTS; o++) {
+		if (output[o] > max) {
+			max = output[o];
+			ret = o;
+		}
+	}
+	return ret;
+}
 
 void
 draw_text(GLint x, GLint y, char* s)
@@ -294,7 +307,7 @@ void display(void) {
 		buf[i*3+2] = input[i] * -127.0;
 	}
 	draw_input(SCREEN_WIDTH-31, 15, buf);
-	sprintf(buf, "guess: %d\n", guess);
+	sprintf(buf, "guess: %d\n", highest_output());
 	draw_text(SCREEN_WIDTH-(8*strlen(buf)), 0, buf);
 	draw_net(GL_RENDER, input, results);
 	free(results);
