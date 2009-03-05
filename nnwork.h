@@ -1,5 +1,5 @@
-#ifndef NNWORK
-#define NNWORK
+#ifndef NNWORK_H
+#define NNWORK_H
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>

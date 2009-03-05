@@ -4,7 +4,7 @@
 #include <time.h>
 #include <string.h>
 #define INPUTS 256
-#define HIDDENS 256
+#define HIDDENS 64
 #define OUTPUTS 10
 #include "nnwork.h"
 #define SCREEN_WIDTH 500
@@ -22,11 +22,12 @@ int counter = 0;
 int mx, my;
 float angleX = 10, angleY = 10;
 double input[256], output[10];
+int guess;
 double depth = -175.0f;
 FILE *train;
 
 void
-draw_text(GLint x, GLint y, char* s, GLfloat r, GLfloat g, GLfloat b)
+draw_text(GLint x, GLint y, char* s)
 {
 	int lines;
 	char* p;
@@ -34,12 +35,11 @@ draw_text(GLint x, GLint y, char* s, GLfloat r, GLfloat g, GLfloat b)
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	glLoadIdentity();
-	glOrtho(0.0, glutGet(GLUT_WINDOW_WIDTH), 
-		0.0, glutGet(GLUT_WINDOW_HEIGHT), -1.0, 1.0);
+	glOrtho(0.0, SCREEN_WIDTH, 
+		0.0, SCREEN_HEIGHT, -1.0, 1.0);
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
 	glLoadIdentity();
-	glColor3f(r,g,b);
 	glMaterialfv(GL_FRONT, GL_EMISSION, positive);
 	glRasterPos2i(x, y);
 	for(p = s, lines = 0; *p; p++) {
@@ -49,6 +49,26 @@ draw_text(GLint x, GLint y, char* s, GLfloat r, GLfloat g, GLfloat b)
 		} else
 			glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *p);
 	}
+	glPopMatrix();
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glMatrixMode(GL_MODELVIEW);
+}
+
+void
+draw_input(GLint x, GLint y, char* input)
+{
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glLoadIdentity();
+	glOrtho(0, SCREEN_WIDTH, 
+		0, SCREEN_HEIGHT, -1.0, 1.0);
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+	glMaterialfv(GL_FRONT, GL_EMISSION, positive);
+	glRasterPos2i(x, y);
+	glDrawPixels(16, 16, GL_RGB, GL_BYTE, input);
 	glPopMatrix();
 	glMatrixMode(GL_PROJECTION);
 	glPopMatrix();
@@ -170,7 +190,7 @@ void kbd(unsigned char key, int x, int y)
 		if (speed > 1) speed--;
 	}
 	if (key == '2') {
-		if (speed < 100) speed++;
+		if (speed < 1000) speed++;
 	}
 	if (key == '3') {
 		if (lambda > 0.01) lambda *= .95;
@@ -238,9 +258,9 @@ void display(void) {
 				buf[0] = fgetc(train);
 				fgetc(train);
 				buf[1] = '\0';
-				h = atoi(buf);
+				guess = atoi(buf);
 				for (i = 0; i < 10; i++)
-					output[i] = (i == h) ? 1.0 : 0.0;
+					output[i] = (i == guess) ? 1.0 : 0.0;
 				break;
 			}
 			i = 0;
@@ -267,7 +287,15 @@ void display(void) {
 			"3 and 4 adjust lambda: %f\n"
 			"1 and 2 adjust speed: %d\n",
 			counter, error, rate, lambda, speed);
-	draw_text(0, 0, buf, 0, 1, 0);
+	draw_text(0, 0, buf);
+	for (i = 0; i < 256; i++) {
+		buf[i*3] = -127.0;
+		buf[i*3+1] = input[i] * -127.0;
+		buf[i*3+2] = input[i] * -127.0;
+	}
+	draw_input(SCREEN_WIDTH-31, 15, buf);
+	sprintf(buf, "guess: %d\n", guess);
+	draw_text(SCREEN_WIDTH-(8*strlen(buf)), 0, buf);
 	draw_net(GL_RENDER, input, results);
 	free(results);
 
