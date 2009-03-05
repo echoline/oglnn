@@ -294,6 +294,9 @@ int main(int argc, char **argv) {
 
 	// antialiasing
 	glEnable(GL_LINE_SMOOTH);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+	glHint(GL_LINE_SMOOTH_HINT,GL_NICEST);
 
 	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
 	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
