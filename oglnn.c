@@ -3,23 +3,16 @@
 #include <unistd.h>
 #include <time.h>
 #include <string.h>
-#define INPUTS 9
-#define HIDDENS 9
-#define OUTPUTS 9
+#define INPUTS 256
+#define HIDDENS 400
+#define OUTPUTS 10
 #include "nnwork.h"
 #define SCREEN_WIDTH 500
 #define SCREEN_HEIGHT 500
 #define BUFSIZE 512
-#define DEPTH -75.0f
+#define DEPTH -175.0f
 
-// truth table for exclusive or
-double input[4][3] = {
-	{ 0.0, 1.0, 1.0 }, 
-	{ 1.0, 0.0, 1.0 }, 
-	{ 1.0, 1.0, 0.0 }, 
-	{ 0.0, 0.0, 0.0 } };
-double output[9] = { 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5 };
-float neuron[] = {0.0f, 0.1f, 0.1f, 1.0f};
+float neuron[] = {0.0f, 0.0f, 0.0f, 0.9f};
 float negative[] = {0.0f, 0.7f, 0.0f, 1.0f};
 float positive[] = {0.0f, 0.0f, 0.7f, 1.0f};
 double lambda = 1, rate = 0.25;
@@ -27,6 +20,8 @@ int speed = 1;
 int counter = 0;
 int mx, my;
 float angleX = 10, angleY = 10;
+double input[256], output[10];
+FILE *train;
 
 void
 draw_text(GLint x, GLint y, char* s, GLfloat r, GLfloat g, GLfloat b)
@@ -59,7 +54,7 @@ draw_text(GLint x, GLint y, char* s, GLfloat r, GLfloat g, GLfloat b)
 }
 
 // process the hits that happened during selection
-void processHits(GLint hits, GLuint buffer[])
+void process_hits(GLint hits, GLuint buffer[])
 {
 	int y = 0, i, h, o;
 	if(hits > 0)//Make sure there is at least one hit
@@ -85,7 +80,7 @@ void draw_net(int mode, double *input, double *output) {
 	glPushMatrix();
 	glTranslatef(0,0,DEPTH);
 	glRotatef(angleX, 0, 1, 0);
-	glRotatef(angleY, 1, 0, 0);
+	glRotatef(-angleY, 1, 0, 0);
 	
 	for (i = 0; i < INPUTS; i++) {
 		for (h = 0; h < HIDDENS; h++) {
@@ -134,7 +129,7 @@ void draw_net(int mode, double *input, double *output) {
 	// input nodes
 	rt = sqrt(INPUTS);
 	for (i = 0; i < INPUTS; i++) {
-		neuron[0] = input[i];
+		neuron[0] = (-input[i] + 1.0) / 2.0;
 		glMaterialfv(GL_FRONT, GL_EMISSION, neuron);
 		glPushMatrix();
 		glTranslatef(((i%rt)*10.0f)-((rt-1)*5.0f), 10.0f, 10.0f*(i/rt)-(rt-1)*5.0f);
@@ -214,12 +209,12 @@ void mbutton(int button, int state, int x, int y)
 			gluPickMatrix((GLdouble)x, (GLdouble)(viewport[3]-y), 
 					4.0, 4.0, viewport);
 			gluPerspective(45.0, SCREEN_WIDTH/SCREEN_HEIGHT, 0.1, 1000.0);
-			draw_net(GL_SELECT, input[0], input[1]);// Draw to the pick matrix instead of our normal one
+			draw_net(GL_SELECT, input, output);// Draw to the pick matrix instead of our normal one
 			glMatrixMode(GL_PROJECTION);
 		glPopMatrix ();
 		glFlush ();
 		hits = glRenderMode (GL_RENDER);//count the hits
-		processHits (hits, selectBuf);//check for object selection
+		process_hits (hits, selectBuf);//check for object selection
 		glutPostRedisplay();
 	}
 }
@@ -227,17 +222,38 @@ void mbutton(int button, int state, int x, int y)
 void mmove(int x, int y) {
 	angleX = (x - mx) * (180.0f/SCREEN_WIDTH);
 	angleY = (y - my) * (180.0f/SCREEN_HEIGHT);
-	glutPostRedisplay();
 }
 
 void display(void) {
-	char hud[1024];
+	char buf[1024];
 	double *results;
-	double error;
+	double error = 0;
 	int i, h, o;
 
-	results = nnwork_train(input[counter%4], output, rate, lambda);
-	error = pow(input[counter%4][2] - results[0], 2.0);
+	h = 0;
+	for(i = 0; !feof(train); i++) {
+		buf[i] = fgetc(train);
+		if (buf[i] == ' ') {
+			input[h++] = atof(buf);
+			if (h > 255) {
+				buf[0] = fgetc(train);
+				fgetc(train);
+				buf[1] = '\0';
+				h = atoi(buf);
+				for (i = 0; i < 10; i++)
+					output[i] = (i == h) ? 1.0 : 0.0;
+				break;
+			}
+			i = 0;
+		}
+	}
+	if (feof(train)) {
+		rewind(train);
+	}
+
+	results = nnwork_train(input, output, rate, lambda);
+	for (o = 0; o < sizeof(results); o++)
+		error += pow(output[o] - results[o], 2);
 
 	counter++;
 	if (counter % speed) {
@@ -247,13 +263,13 @@ void display(void) {
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	sprintf(hud, "Epochs: %d\nError: %20.18lf\nPress s to seed network\n"
+	sprintf(buf, "Epochs: %d\nError: %20.18lf\nPress s to seed network\n"
 			"5 and 6 adjust learning rate: %f\n"
 			"3 and 4 adjust lambda: %f\n"
 			"1 and 2 adjust speed: %d\n",
 			counter, error, rate, lambda, speed);
-	draw_text(0, 0, hud, 0, 1, 0);
-	draw_net(GL_RENDER, input[(counter-1)%4], results);
+	draw_text(0, 0, buf, 0, 1, 0);
+	draw_net(GL_RENDER, input, results);
 	free(results);
 
 	glFlush();
@@ -269,7 +285,7 @@ void resize(int w, int h)
         gluPerspective(45.0, SCREEN_WIDTH / SCREEN_HEIGHT, 0.01, 1000.0);
         glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-	glutWarpPointer(SCREEN_WIDTH/2, SCREEN_HEIGHT/2);
+	glutWarpPointer(SCREEN_WIDTH, SCREEN_HEIGHT);
 }
 
 int main(int argc, char **argv) {
@@ -280,6 +296,16 @@ int main(int argc, char **argv) {
 	GLfloat light_diffuse[] = { 0.5, 0.5, 0.5, 1.0 };
 	GLfloat light_specular[] = { 0.5, 0.5, 0.5, 1.0 };
 	GLfloat light_position[] = { 0.0, 6.0, -70.0, 1.0 };
+
+	if (argc < 2) {
+		fprintf(stderr, "please specify a training file\n");
+		return -1;
+	}
+	train = fopen(argv[1], "r");
+	if (!train) {
+		fprintf(stderr, "unable to open training file\n");
+		return -1;
+	}
 
 	glutInit(&argc, argv);
         glutInitWindowPosition(0, 0);
