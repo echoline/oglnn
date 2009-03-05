@@ -4,7 +4,7 @@
 #include <time.h>
 #include <string.h>
 #define INPUTS 256
-#define HIDDENS 400
+#define HIDDENS 256
 #define OUTPUTS 10
 #include "nnwork.h"
 #define SCREEN_WIDTH 500
@@ -298,12 +298,12 @@ int main(int argc, char **argv) {
 	GLfloat light_position[] = { 0.0, 6.0, -70.0, 1.0 };
 
 	if (argc < 2) {
-		fprintf(stderr, "please specify a training file\n");
+		printf("please specify a training file\n");
 		return -1;
 	}
 	train = fopen(argv[1], "r");
 	if (!train) {
-		fprintf(stderr, "unable to open training file\n");
+		printf("unable to open training file\n");
 		return -1;
 	}
 

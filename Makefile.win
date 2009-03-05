@@ -1,0 +1,30 @@
+# Project: oglnn
+# Makefile created by Dev-C++ 4.9.9.2
+
+CPP  = g++.exe
+CC   = gcc.exe
+WINDRES = windres.exe
+RES  = 
+OBJ  = oglnn.o $(RES)
+LINKOBJ  = oglnn.o $(RES)
+LIBS =  -L"G:/Dev-Cpp/lib" -mwindows -lglut32 -lglu32 -lopengl32 -lwinmm -lgdi32 
+INCS =  -I"G:/Dev-Cpp/include" 
+CXXINCS =  -I"G:/Dev-Cpp/lib/gcc/mingw32/3.4.2/include"  -I"G:/Dev-Cpp/include/c++/3.4.2/backward"  -I"G:/Dev-Cpp/include/c++/3.4.2/mingw32"  -I"G:/Dev-Cpp/include/c++/3.4.2"  -I"G:/Dev-Cpp/include" 
+BIN  = oglnn.exe
+CXXFLAGS = $(CXXINCS)  
+CFLAGS = $(INCS)  
+RM = rm -f
+
+.PHONY: all all-before all-after clean clean-custom
+
+all: all-before oglnn.exe all-after
+
+
+clean: clean-custom
+	${RM} $(OBJ) $(BIN)
+
+$(BIN): $(OBJ)
+	$(CC) $(LINKOBJ) -o "oglnn.exe" $(LIBS)
+
+oglnn.o: oglnn.c G:/Dev-Cpp/include/GL/glut.h   G:/Dev-Cpp/include/windows.h G:/Dev-Cpp/include/GL/gl.h   G:/Dev-Cpp/include/GL/glu.h G:/Dev-Cpp/include/unistd.h   G:/Dev-Cpp/include/io.h G:/Dev-Cpp/include/sys/types.h   G:/Dev-Cpp/include/stdint.h G:/Dev-Cpp/include/process.h   G:/Dev-Cpp/include/getopt.h G:/Dev-Cpp/include/time.h nnwork.h   G:/Dev-Cpp/include/math.h G:/Dev-Cpp/include/stdlib.h   G:/Dev-Cpp/include/stdio.h
+	$(CC) -c oglnn.c -o oglnn.o $(CFLAGS)
