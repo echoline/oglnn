@@ -195,7 +195,13 @@ void draw_net(int mode, double *input, double *output) {
 
 void kbd(unsigned char key, int x, int y)
 {
+	if (key == 'w') {
+		depth++;
+	}
 	if (key == 's') {
+		depth--;
+	}
+	if (key == 'S') {
 		nnwork_init(time(NULL));
 		counter = 0;
 	}

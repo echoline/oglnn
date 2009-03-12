@@ -1,5 +1,5 @@
-#ifndef NNWORK_H
-#define NNWORK_H
+#ifndef NNWORK
+#define NNWORK
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -26,7 +26,7 @@ double hidden_outputs[HIDDENS];
 // the default
 typedef double (*sigmoid_func_t)(double,double);
 
-// this is the logistic function.
+// this is the default logistic function.
 // if this is modified, train() must also be modified
 // because it uses this function's derivative
 // can be overridden by setting sigmoid_func
@@ -54,7 +54,7 @@ void nnwork_init(unsigned long seed) {
 // lambda is used in sigmoid function
 double *nnwork_run(double *input, double lambda) {
 	double sum;
-	double *ret = malloc(sizeof(double) * OUTPUTS);
+	double *ret = (double*)malloc(sizeof(double) * OUTPUTS);
 	int i, h, o;
 
 	for (h = 0; h < HIDDENS; h++) {
@@ -88,33 +88,44 @@ double *nnwork_train(double *input, double *goal, double rate, double lambda) {
 	double sum;
 	int i, h, o;
 
+	// run the network so we can compute the error
 	output = nnwork_run(input, lambda);
 
-	// page 468 {
+	// compute the delta values for each of the outputs
 	for (o = 0; o < OUTPUTS; o++)
 		deltas[o] = (goal[o] - output[o]) * output[o] * (1.0 - output[o]);
 
+	// hidden to output change
 	for (o = 0; o < OUTPUTS; o++)
 		for (h = 0; h < HIDDENS; h++)
+			//  if the weight is active, adjust it
 			if (isnormal(ho_weights[h][o]))
 				ho_delta[h][o] = rate * deltas[o] * hidden_outputs[h];
 
+	// input to hidden change and adjustment
 	for (h = 0; h < HIDDENS; h++)
 		for (i = 0; i < INPUTS; i++) {
-			sum = 0;
-			for (o = 0; o < OUTPUTS; o++)
-				if (isnormal(ho_weights[h][o]))
-					sum += deltas[o] * ho_weights[h][o];
-			if (isnormal(ih_weights[i][h]))
+			// if the weight is active,
+			if (isnormal(ih_weights[i][h])) {
+				// for each of the output nodes,
+				sum = 0;
+				for (o = 0; o < OUTPUTS; o++)
+					// if the hidden to output weight is active
+					if (isnormal(ho_weights[h][o]))
+						// apply its contribution to the error
+						sum += deltas[o] * ho_weights[h][o];
+				// adjust the weight
 				ih_weights[i][h] += rate * hidden_outputs[h] * (1.0 - hidden_outputs[h]) * sum * input[i];
+			}
 		}
 
+	// adjust the hidden to output weights
 	for (o = 0; o < OUTPUTS; o++)
 		for (h = 0; h < HIDDENS; h++)
 			if (isnormal(ho_weights[h][o]))
 				ho_weights[h][o] += ho_delta[h][o];
-	// }
 
+	// return the result of run()
 	return output;
 }
 
