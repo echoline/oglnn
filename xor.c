@@ -3,9 +3,10 @@
 #include <unistd.h>
 #include <time.h>
 #include <string.h>
-#define INPUTS 256
-#define HIDDENS 64
-#define OUTPUTS 10
+#include <stdlib.h>
+#define INPUTS 2
+#define HIDDENS 9
+#define OUTPUTS 1
 #include "nnwork.h"
 #define SCREEN_WIDTH 500
 #define SCREEN_HEIGHT 500
@@ -15,6 +16,17 @@
 float neuron[] = {0.0f, 0.0f, 0.0f, 1.0f};
 float negative[] = {0.0f, 0.7f, 0.0f, 1.0f};
 float positive[] = {0.0f, 0.0f, 0.7f, 1.0f};
+typedef struct {
+	float	input[2];
+	float	output[1];
+} xor_t;
+
+xor_t xor_data[] = {
+	{ {1.0f, 1.0f}, {0.0f} },
+	{ {1.0f, 0.0f}, {1.0f} },
+	{ {0.0f, 1.0f}, {1.0f} },
+	{ {0.0f, 0.0f}, {0.0f} },
+};
 
 double lambda = 1, rate = 0.25;
 int speed = 1;
@@ -23,21 +35,8 @@ int mx, my;
 float angleX = 10, angleY = 10;
 double input[INPUTS], output[OUTPUTS];
 int guess;
-double depth = -175.0f;
+double depth = -75.0f;
 FILE *train;
-
-int
-highest_output() {
-	int o, ret = -1;
-	double max = -100;
-	for (o = 0; o < OUTPUTS; o++) {
-		if (output[o] > max) {
-			max = output[o];
-			ret = o;
-		}
-	}
-	return ret;
-}
 
 void
 draw_text(GLint x, GLint y, char* s)
@@ -266,32 +265,15 @@ void display(void) {
 	char buf[1024];
 	double *results;
 	double error = 0;
-	int i, h, o;
+	int i, h, o, r;
 
-	h = 0;
-	for(i = 0; !feof(train); i++) {
-		buf[i] = fgetc(train);
-		if (buf[i] == ' ') {
-			input[h++] = atof(buf);
-			if (h > 255) {
-				buf[0] = fgetc(train);
-				fgetc(train);
-				buf[1] = '\0';
-				guess = atoi(buf);
-				for (i = 0; i < 10; i++)
-					output[i] = (i == guess) ? 1.0 : 0.0;
-				break;
-			}
-			i = 0;
-		}
-	}
-	if (feof(train)) {
-		rewind(train);
-	}
+	r = rand() % 4;
+	input[0] = xor_data[r].input[0];
+	input[1] = xor_data[r].input[1];
+	output[0] = xor_data[r].output[0];
 
 	results = nnwork_train(input, output, rate, lambda);
-	for (o = 0; o < sizeof(results); o++)
-		error += pow(output[o] - results[o], 2);
+	error = pow(output[0] - results[0], 2);
 
 	counter++;
 	if (counter % speed) {
@@ -301,20 +283,8 @@ void display(void) {
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	sprintf(buf, "Epochs: %d\nError: %20.18lf\nPress s to seed network\n"
-			"5 and 6 adjust learning rate: %f\n"
-			"3 and 4 adjust lambda: %f\n"
-			"1 and 2 adjust speed: %d\n",
-			counter, error, rate, lambda, speed);
+	sprintf(buf, "Epochs: %d\nError: %20.18lf\nInput: %f xor %f\nOutput: %f", counter, error, input[0], input[1], output[0]);
 	draw_text(0, 0, buf);
-	for (i = 0; i < 256; i++) {
-		buf[i*3] = -127.0;
-		buf[i*3+1] = input[i] * -127.0;
-		buf[i*3+2] = input[i] * -127.0;
-	}
-	draw_input(SCREEN_WIDTH-31, 15, buf);
-	sprintf(buf, "guess: %d\n", highest_output());
-	draw_text(SCREEN_WIDTH-(8*strlen(buf)), 0, buf);
 	draw_net(GL_RENDER, input, results);
 	free(results);
 
@@ -342,16 +312,6 @@ int main(int argc, char **argv) {
 	GLfloat light_diffuse[] = { 0.5, 0.5, 0.5, 1.0 };
 	GLfloat light_specular[] = { 0.5, 0.5, 0.5, 1.0 };
 	GLfloat light_position[] = { 0.0, 6.0, -70.0, 1.0 };
-
-	if (argc < 2) {
-		printf("please specify a training file\n");
-		return -1;
-	}
-	train = fopen(argv[1], "r");
-	if (!train) {
-		printf("unable to open training file\n");
-		return -1;
-	}
 
 	glutInit(&argc, argv);
 	glutInitWindowPosition(0, 0);
@@ -391,6 +351,7 @@ int main(int argc, char **argv) {
 	glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
 
 	nnwork_init(time(NULL));
+	srand(time(NULL));
 
 	glutMainLoop();
 }
