@@ -5,7 +5,7 @@
 #include <string.h>
 #include <stdlib.h>
 #define INPUTS 2
-#define HIDDENS 9
+#define HIDDENS 16
 #define OUTPUTS 1
 #include "nnwork.h"
 #define SCREEN_WIDTH 500
@@ -283,7 +283,7 @@ void display(void) {
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	sprintf(buf, "Epochs: %d\nError: %20.18lf\nInput: %f xor %f\nOutput: %f", counter, error, input[0], input[1], output[0]);
+	sprintf(buf, "Epochs: %d\nError: %20.18lf\nInput: %f xor %f\nOutput: %f", counter, error, input[0], input[1], results[0]);
 	draw_text(0, 0, buf);
 	draw_net(GL_RENDER, input, results);
 	free(results);
