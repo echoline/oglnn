@@ -76,6 +76,33 @@ double *nnwork_run(double *input, double lambda) {
 	return ret;
 }
 
+// returns the "input" nodes
+// input is array of size OUTPUTS
+// lambda is used in sigmoid function
+double *nnwork_run_backwards(double *output, double lambda) {
+	double sum;
+	double *ret = malloc(sizeof(double) * INPUTS);
+	int i, h, o;
+
+	for (o = 0; o < OUTPUTS; o++) {
+		sum = 0;
+		for (h = 0; h < HIDDENS; h++)
+			if (isnormal(ho_weights[h][o]))
+				sum += ho_weights[h][o] * output[o];
+		hidden_outputs[h] = sigmoid_func(sum, lambda);
+	}
+
+	for (h = 0; h < HIDDENS; h++) {
+		sum = 0;
+		for (i = 0; i < INPUTS; i++) {
+			if (isnormal(ih_weights[i][h]))
+				sum += ih_weights[i][h] * hidden_outputs[h];
+		}
+		ret[i] = sigmoid_func(sum, lambda);
+	}
+	return ret;
+}
+
 // returns the output of run()
 // input is array of size INPUTS
 // goal is desired output value

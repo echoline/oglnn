@@ -155,7 +155,7 @@ void graph_selected() {
 			if (answer > 1.0) data[x][y] = 255;
 			else if (answer < 0.0) data[x][y] = 0;
 			else {
-				data[x][y] = (answer * 255.0);
+				data[x][y] = (255.0 / answer);
 			}
 			test[1] += incy;
 		}

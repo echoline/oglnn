@@ -25,6 +25,7 @@ double input[INPUTS], output[OUTPUTS];
 int guess;
 double depth = -175.0f;
 FILE *train;
+int backwards = 0;
 
 int
 highest_output() {
@@ -205,6 +206,9 @@ void kbd(unsigned char key, int x, int y)
 		nnwork_init(time(NULL));
 		counter = 0;
 	}
+	if (key == 'b') {
+		backwards = !backwards;
+	}
 	if (key == '1') {
 		if (speed > 1) speed--;
 	}
@@ -267,7 +271,9 @@ void display(void) {
 	double *results;
 	double error = 0;
 	int i, h, o;
+	static int outinput = 0;
 
+if (!backwards) {
 	h = 0;
 	for(i = 0; !feof(train); i++) {
 		buf[i] = fgetc(train);
@@ -292,6 +298,12 @@ void display(void) {
 	results = nnwork_train(input, output, rate, lambda);
 	for (o = 0; o < sizeof(results); o++)
 		error += pow(output[o] - results[o], 2);
+} else {
+	guess = counter % 10;
+	for (i = 0; i < 10; i++)
+		output[i] = (i == guess) ? 1.0 : 0.0;
+	results = nnwork_run_backwards(output, lambda);
+}
 
 	counter++;
 	if (counter % speed) {
@@ -301,21 +313,33 @@ void display(void) {
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	sprintf(buf, "Epochs: %d\nError: %20.18lf\nPress s to seed network\n"
+	sprintf(buf, "Epochs: %d\nError: %20.18lf\n"
 			"5 and 6 adjust learning rate: %f\n"
 			"3 and 4 adjust lambda: %f\n"
-			"1 and 2 adjust speed: %d\n",
+			"1 and 2 adjust speed: %d\n"
+			"b to reverse direction (does not train)\n",
 			counter, error, rate, lambda, speed);
 	draw_text(0, 0, buf);
+if (!backwards) {
 	for (i = 0; i < 256; i++) {
 		buf[i*3] = -127.0;
 		buf[i*3+1] = input[i] * -127.0;
 		buf[i*3+2] = input[i] * -127.0;
 	}
+} else {
+	for (i = 0; i < 256; i++) {
+		buf[i*3] = -127.0;
+		buf[i*3+1] = results[i] * -127.0;
+		buf[i*3+2] = results[i] * -127.0;
+	}
+}
 	draw_input(SCREEN_WIDTH-31, 15, buf);
 	sprintf(buf, "guess: %d\n", highest_output());
 	draw_text(SCREEN_WIDTH-(8*strlen(buf)), 0, buf);
-	draw_net(GL_RENDER, input, results);
+	if (!backwards)
+		draw_net(GL_RENDER, input, results);
+	else
+		draw_net(GL_RENDER, results, output);
 	free(results);
 
 	glFlush();
