@@ -32,6 +32,7 @@ typedef double (*sigmoid_func_t)(double,double);
 // can be overridden by setting sigmoid_func
 double nnwork_sigmoid(double input, double lambda) {
 	return (1.0 / (1.0 + exp(-input*lambda)));
+//	return tanh (input*lambda);
 }
 sigmoid_func_t sigmoid_func = nnwork_sigmoid;
 
@@ -120,6 +121,7 @@ double *nnwork_train(double *input, double *goal, double rate, double lambda) {
 
 	// compute the delta values for each of the outputs
 	for (o = 0; o < OUTPUTS; o++)
+//		deltas[o] = (goal[o] - output[o]) * (1.0/cosh(output[o])) * (1.0/cosh(output[o]));
 		deltas[o] = (goal[o] - output[o]) * output[o] * (1.0 - output[o]);
 
 	// hidden to output change
@@ -142,6 +144,7 @@ double *nnwork_train(double *input, double *goal, double rate, double lambda) {
 						// apply its contribution to the error
 						sum += deltas[o] * ho_weights[h][o];
 				// adjust the weight
+				//ih_weights[i][h] += rate * (1.0/cosh(hidden_outputs[h])) * (1.0/cosh(hidden_outputs[h])) * sum * input[i]; 
 				ih_weights[i][h] += rate * hidden_outputs[h] * (1.0 - hidden_outputs[h]) * sum * input[i];
 			}
 		}

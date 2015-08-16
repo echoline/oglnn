@@ -15,6 +15,7 @@
 float neuron[] = {0.0f, 0.0f, 0.0f, 1.0f};
 float negative[] = {0.0f, 0.7f, 0.0f, 1.0f};
 float positive[] = {0.0f, 0.0f, 0.7f, 1.0f};
+float white[] = {1.0f, 1.0f, 1.0f, 1.0f};
 
 double lambda = 1, rate = 0.25;
 int speed = 1;
@@ -54,7 +55,7 @@ draw_text(GLint x, GLint y, char* s)
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
 	glLoadIdentity();
-	glMaterialfv(GL_FRONT, GL_EMISSION, positive);
+	glMaterialfv(GL_FRONT, GL_EMISSION, white);
 	glRasterPos2i(x, y);
 	for(p = s, lines = 0; *p; p++) {
 		if (*p == '\n') {
@@ -175,7 +176,7 @@ void draw_net(int mode, double *input, double *output) {
 	// hidden nodes
 	rt = sqrt(HIDDENS);
 	for (h = 0; h < HIDDENS; h++) {
-		neuron[0] = hidden_outputs[h];
+		neuron[0] = (hidden_outputs[h] + 1.0) / 2.0;
 		glMaterialfv(GL_FRONT, GL_EMISSION, neuron);
 		glTranslatef(((h%rt)*10.0f)-((rt-1)*5.0f), 0.0f, 10.0f*(h/rt)-(rt-1)*5.0f);
 		glutSolidSphere(1,20,20);
@@ -185,7 +186,7 @@ void draw_net(int mode, double *input, double *output) {
 	// output nodes
 	rt = sqrt(OUTPUTS);
 	for (o = 0; o < OUTPUTS; o++) {
-		neuron[0] = output[o];
+		neuron[0] = (output[o] + 1.0) / 2.0;
 		glMaterialfv(GL_FRONT, GL_EMISSION, neuron);
 		glTranslatef(((o%rt)*10.0f)-((rt-1)*5.0f), -10.0f, 10.0f*(o/rt)-(rt-1)*5.0f);
 		glutSolidSphere(1,20,20);
@@ -285,7 +286,7 @@ if (!backwards) {
 				buf[1] = '\0';
 				guess = atoi(buf);
 				for (i = 0; i < 10; i++)
-					output[i] = (i == guess) ? 1.0 : 0.0;
+					output[i] = (i == guess) ? 1.0 : -1.0;
 				break;
 			}
 			i = 0;
