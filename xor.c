@@ -168,7 +168,7 @@ void draw_net(int mode, double *input, double *output) {
 	// input nodes
 	rt = sqrt(INPUTS);
 	for (i = 0; i < INPUTS; i++) {
-		neuron[0] = (input[i] + 1.0) / 2.0;
+		neuron[0] = (-input[i] + 1.0) / 2.0;
 		glMaterialfv(GL_FRONT, GL_EMISSION, neuron);
 		glTranslatef(((i%rt)*10.0f)-((rt-1)*5.0f), 10.0f, 10.0f*(i/rt)-(rt-1)*5.0f);
 		glutSolidSphere(1,20,20);
@@ -178,7 +178,7 @@ void draw_net(int mode, double *input, double *output) {
 	// hidden nodes
 	rt = sqrt(HIDDENS);
 	for (h = 0; h < HIDDENS; h++) {
-		neuron[0] = (hidden_outputs[h] + 1.0) / 2.0;
+		neuron[0] = hidden_outputs[h];
 		glMaterialfv(GL_FRONT, GL_EMISSION, neuron);
 		glTranslatef(((h%rt)*10.0f)-((rt-1)*5.0f), 0.0f, 10.0f*(h/rt)-(rt-1)*5.0f);
 		glutSolidSphere(1,20,20);
@@ -188,7 +188,7 @@ void draw_net(int mode, double *input, double *output) {
 	// output nodes
 	rt = sqrt(OUTPUTS);
 	for (o = 0; o < OUTPUTS; o++) {
-		neuron[0] = (output[o] + 1.0) / 2.0;
+		neuron[0] = output[o];
 		glMaterialfv(GL_FRONT, GL_EMISSION, neuron);
 		glTranslatef(((o%rt)*10.0f)-((rt-1)*5.0f), -10.0f, 10.0f*(o/rt)-(rt-1)*5.0f);
 		glutSolidSphere(1,20,20);
