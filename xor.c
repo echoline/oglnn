@@ -5,7 +5,7 @@
 #include <string.h>
 #include <stdlib.h>
 #define INPUTS 2
-#define HIDDENS 16
+#define HIDDENS 4
 #define OUTPUTS 1
 #include "nnwork.h"
 #define SCREEN_WIDTH 500
@@ -14,9 +14,9 @@
 
 // RGBA colors
 float neuron[] = {0.0f, 0.0f, 0.0f, 1.0f};
-float negative[] = {0.0f, 0.7f, 0.0f, 1.0f};
-float positive[] = {0.0f, 0.0f, 0.7f, 1.0f};
-float white[] = {1.0f, 1.0f, 1.0f, 1.0f};
+float negative[] = {0.0f, 1.0f, 0.0f, 1.0f};
+float positive[] = {0.0f, 0.0f, 1.0f, 1.0f};
+float text[] = {0.0f, 0.0f, 0.0f, 1.0f};
 typedef struct {
 	float	input[2];
 	float	output[1];
@@ -24,16 +24,16 @@ typedef struct {
 
 xor_t xor_data[] = {
 	{ {1.0f, 1.0f}, {0.0f} },
-	{ {1.0f, 0.0f}, {1.0f} },
-	{ {0.0f, 1.0f}, {1.0f} },
-	{ {0.0f, 0.0f}, {0.0f} },
-	/*{ {1.0f, 1.0f}, {-1.0f} },
 	{ {1.0f, -1.0f}, {1.0f} },
 	{ {-1.0f, 1.0f}, {1.0f} },
-	{ -1.0f, -1.0f}, {-1.0f} },*/
+	{ {-1.0f, -1.0f}, {0.0f} },
+	{ {1.0f, 1.0f}, {0.0f} },
+	{ {1.0f, -1.0f}, {1.0f} },
+	{ {-1.0f, 1.0f}, {1.0f} },
+	{ {-1.0f, -1.0f}, {0.0f} },
 };
 
-double lambda = 1, rate = 0.25;
+double lambda = 1.0, rate = 0.125;
 int speed = 1;
 int counter = 0;
 int mx, my;
@@ -57,7 +57,7 @@ draw_text(GLint x, GLint y, char* s)
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
 	glLoadIdentity();
-	glMaterialfv(GL_FRONT, GL_EMISSION, white);
+	glMaterialfv(GL_FRONT, GL_EMISSION, text);
 	glRasterPos2i(x, y);
 	for(p = s, lines = 0; *p; p++) {
 		if (*p == '\n') {
@@ -73,7 +73,7 @@ draw_text(GLint x, GLint y, char* s)
 }
 
 void
-draw_input(GLint x, GLint y, char* input)
+Draw_input(GLint x, GLint y, char* input)
 {
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
@@ -168,7 +168,7 @@ void draw_net(int mode, double *input, double *output) {
 	// input nodes
 	rt = sqrt(INPUTS);
 	for (i = 0; i < INPUTS; i++) {
-		neuron[0] = (-input[i] + 1.0) / 2.0;
+		neuron[0] = input[i];
 		glMaterialfv(GL_FRONT, GL_EMISSION, neuron);
 		glTranslatef(((i%rt)*10.0f)-((rt-1)*5.0f), 10.0f, 10.0f*(i/rt)-(rt-1)*5.0f);
 		glutSolidSphere(1,20,20);
@@ -272,13 +272,13 @@ void display(void) {
 	double error = 0;
 	int i, h, o, r;
 
-	r = rand() % 4;
+	r = counter % 4;
 	input[0] = xor_data[r].input[0];
 	input[1] = xor_data[r].input[1];
 	output[0] = xor_data[r].output[0];
 
 	results = nnwork_train(input, output, rate, lambda);
-	error = pow(output[0] - results[0], 2);
+	error = pow(results[0] - output[0], 2) / 2.0;
 
 	counter++;
 	if (counter % speed) {
@@ -286,9 +286,10 @@ void display(void) {
 		return;
 	}
 
+	glClearColor(0.6f, 0.6f, 0.6f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	sprintf(buf, "Epochs: %d\nError: %20.18lf\nInput: %f xor %f\nOutput: %f", counter, error, input[0], input[1], results[0]);
+	sprintf(buf, "Epochs: %d\nError: %20.18lf\nInput: %f xor %f\nOutput: %f\nSpeed[%04d] Lambda[%04f] Rate[%04f]", counter, error, input[0], input[1], results[0], speed, lambda, rate);
 	draw_text(0, 0, buf);
 	draw_net(GL_RENDER, input, results);
 	free(results);

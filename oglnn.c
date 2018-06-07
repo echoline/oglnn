@@ -274,7 +274,7 @@ void display(void) {
 	int i, h, o;
 	static int outinput = 0;
 
-if (!backwards) {
+if (1 || !backwards) {
 	h = 0;
 	for(i = 0; !feof(train); i++) {
 		buf[i] = fgetc(train);
@@ -300,10 +300,11 @@ if (!backwards) {
 	for (o = 0; o < sizeof(results); o++)
 		error += pow(output[o] - results[o], 2);
 } else {
+/*
 	guess = counter % 10;
 	for (i = 0; i < 10; i++)
 		output[i] = (i == guess) ? 1.0 : 0.0;
-	results = nnwork_run_backwards(output, lambda);
+	results = nnwork_run_backwards(output, lambda);*/
 }
 
 	counter++;
@@ -312,6 +313,7 @@ if (!backwards) {
 		return;
 	}
 
+	glClearColor(0.2, 0.2, 0.2, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	sprintf(buf, "Epochs: %d\nError: %20.18lf\n"
