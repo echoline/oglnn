@@ -33,7 +33,7 @@ xor_t xor_data[] = {
 	{ {-1.0f, -1.0f}, {0.0f} },
 };
 
-double lambda = 1.0, rate = 0.05;
+double lambda = 1.0, rate = 0.25;
 int speed = 1;
 int counter = 0;
 int mx, my;
