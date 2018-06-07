@@ -127,7 +127,7 @@ void draw_net(int mode, double *input, double *output) {
 				glMaterialfv(GL_FRONT, GL_EMISSION, negative);
 			else
 				glMaterialfv(GL_FRONT, GL_EMISSION, positive);
-			glLineWidth(abs(ih_weights[i][h]));
+			glLineWidth((int)fabs(ih_weights[i][h]));
 			if (mode == GL_SELECT)
 				glPushName(i*HIDDENS+h);
 			glBegin(GL_LINES);
@@ -149,7 +149,7 @@ void draw_net(int mode, double *input, double *output) {
 				glMaterialfv(GL_FRONT, GL_EMISSION, negative);
 			else
 				glMaterialfv(GL_FRONT, GL_EMISSION, positive);
-			glLineWidth(abs(ho_weights[h][o]));
+			glLineWidth((int)fabs(ho_weights[h][o]));
 			if (mode == GL_SELECT)
 				glPushName(INPUTS*HIDDENS+o*HIDDENS+h);
 			glBegin(GL_LINES);
@@ -316,7 +316,7 @@ if (1 || !backwards) {
 	glClearColor(0.2, 0.2, 0.2, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	sprintf(buf, "Epochs: %d\nError: %20.18lf\n"
+	snprintf(buf, sizeof(buf)-1, "Epochs: %d\nError: %20.18lf\n"
 			"5 and 6 adjust learning rate: %f\n"
 			"3 and 4 adjust lambda: %f\n"
 			"1 and 2 adjust speed: %d\n"
@@ -337,12 +337,13 @@ if (!backwards) {
 	}
 }
 	draw_input(SCREEN_WIDTH-31, 15, buf);
-	sprintf(buf, "guess: %d\n", highest_output());
+	snprintf(buf, sizeof(buf)-1, "guess: %d\n", highest_output());
 	draw_text(SCREEN_WIDTH-(8*strlen(buf)), 0, buf);
 	if (!backwards)
 		draw_net(GL_RENDER, input, results);
 	else
 		draw_net(GL_RENDER, results, output);
+	//memcpy(&input[256], results, sizeof(double)*OUTPUTS);
 	free(results);
 
 	glFlush();

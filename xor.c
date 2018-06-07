@@ -24,16 +24,16 @@ typedef struct {
 
 xor_t xor_data[] = {
 	{ {1.0f, 1.0f}, {0.0f} },
-	{ {1.0f, -1.0f}, {1.0f} },
-	{ {-1.0f, 1.0f}, {1.0f} },
-	{ {-1.0f, -1.0f}, {0.0f} },
+	{ {1.0f, 0.0f}, {1.0f} },
+	{ {0.0f, 1.0f}, {1.0f} },
+	{ {0.0f, 0.0f}, {0.0f} },
 	{ {1.0f, 1.0f}, {0.0f} },
 	{ {1.0f, -1.0f}, {1.0f} },
 	{ {-1.0f, 1.0f}, {1.0f} },
 	{ {-1.0f, -1.0f}, {0.0f} },
 };
 
-double lambda = 1.0, rate = 0.125;
+double lambda = 1.0, rate = 0.05;
 int speed = 1;
 int counter = 0;
 int mx, my;
@@ -129,7 +129,7 @@ void draw_net(int mode, double *input, double *output) {
 				glMaterialfv(GL_FRONT, GL_EMISSION, negative);
 			else
 				glMaterialfv(GL_FRONT, GL_EMISSION, positive);
-			glLineWidth(abs(ih_weights[i][h]));
+			glLineWidth((int)fabs(ih_weights[i][h]));
 			if (mode == GL_SELECT)
 				glPushName(i*HIDDENS+h);
 			glBegin(GL_LINES);
@@ -151,7 +151,7 @@ void draw_net(int mode, double *input, double *output) {
 				glMaterialfv(GL_FRONT, GL_EMISSION, negative);
 			else
 				glMaterialfv(GL_FRONT, GL_EMISSION, positive);
-			glLineWidth(abs(ho_weights[h][o]));
+			glLineWidth((int)fabs(ho_weights[h][o]));
 			if (mode == GL_SELECT)
 				glPushName(INPUTS*HIDDENS+o*HIDDENS+h);
 			glBegin(GL_LINES);
@@ -168,7 +168,7 @@ void draw_net(int mode, double *input, double *output) {
 	// input nodes
 	rt = sqrt(INPUTS);
 	for (i = 0; i < INPUTS; i++) {
-		neuron[0] = input[i];
+		neuron[0] = (input[i] + 1.0) / 2.0; 
 		glMaterialfv(GL_FRONT, GL_EMISSION, neuron);
 		glTranslatef(((i%rt)*10.0f)-((rt-1)*5.0f), 10.0f, 10.0f*(i/rt)-(rt-1)*5.0f);
 		glutSolidSphere(1,20,20);
@@ -289,7 +289,7 @@ void display(void) {
 	glClearColor(0.6f, 0.6f, 0.6f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	sprintf(buf, "Epochs: %d\nError: %20.18lf\nInput: %f xor %f\nOutput: %f\nSpeed[%04d] Lambda[%04f] Rate[%04f]", counter, error, input[0], input[1], results[0], speed, lambda, rate);
+	snprintf(buf, sizeof(buf) - 1, "Epochs: %d\nError: %20.18lf\nInput: %f xor %f\nOutput: %f\nSpeed[%04d] Lambda[%04f] Rate[%04f]", counter, error, input[0], input[1], results[0], speed, lambda, rate);
 	draw_text(0, 0, buf);
 	draw_net(GL_RENDER, input, results);
 	free(results);
@@ -311,6 +311,9 @@ void resize(int w, int h)
 }
 
 int main(int argc, char **argv) {
+	hidden_func = nnwork_sigmoid;
+	output_func = nnwork_sigmoid;
+
 	GLfloat mat_specular[] = { 0.0, 0.0, 1.0, 0.5 };
 	GLfloat mat_shininess[] = { 75.0 };
 	GLfloat mat_diffuse[] = { 0.0, 0.0, 1.0, 0.5 };

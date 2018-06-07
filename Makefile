@@ -1,4 +1,4 @@
-all: oglnn
+all: oglnn xor
 
 nnwork: main.c nnwork.h
 	cc -o nnwork main.c -lm -g -std=c99

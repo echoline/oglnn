@@ -32,11 +32,8 @@ typedef double (*sigmoid_func_t)(double,double);
 // can be overridden by setting sigmoid_func
 double nnwork_sigmoid(double input, double lambda) {
 	return (1.0 / (1.0 + exp(-input*lambda)));
-//	return input*lambda;
-//	return (input > 0.0? input*lambda: 0.0);
 }
 double nnwork_relu(double input, double lambda) {
-	//return (1.0 / (1.0 + exp(-input*lambda)));
 	return (input > 0.0? input*lambda: 0.01*input*lambda);
 }
 double nnwork_tanh(double input, double lambda) {
@@ -132,9 +129,14 @@ double *nnwork_train(double *input, double *goal, double rate, double lambda) {
 
 	// compute the delta values for each of the outputs
 	for (o = 0; o < OUTPUTS; o++) {
-		deltas[o] = (goal[o] - output[o]) * output[o] * (1.0 - output[o]);
-//		deltas[o] = (goal[o] - output[o]) * lambda;
-//		deltas[o] = (goal[o] - output[o]) * (1.0 - pow(tanh(output[0]), 2.0));
+		if (output_func == nnwork_sigmoid)
+			deltas[o] = (goal[o] - output[o]) * output[o] * (1.0 - output[o]);
+		else if (output_func == nnwork_relu)
+			deltas[o] = (goal[o] - output[o]) * (output[o] < 0.0? 0.01: 1.0);
+		else if (output_func == nnwork_tanh)
+			deltas[o] = (goal[o] - output[o]) * (1.0 - pow(output[0], 2.0));
+		else
+			exit(-2);
 	}
 
 	// hidden to output change
@@ -157,9 +159,14 @@ double *nnwork_train(double *input, double *goal, double rate, double lambda) {
 						// apply its contribution to the error
 						sum += deltas[o] * ho_weights[h][o];
 				// adjust the weight
-				//ih_weights[i][h] += rate * (1.0 - pow(tanh(hidden_outputs[h]), 2.0)) * sum * input[i]; 
-				//ih_weights[i][h] += rate * hidden_outputs[h] * (1.0 - hidden_outputs[h]) * sum * input[i];
-				ih_weights[i][h] += rate * (hidden_outputs[h] > 0.0? 1.0: 0.01) * lambda * sum * input[i];
+				if (hidden_func == nnwork_tanh)
+					ih_weights[i][h] += rate * (1.0 - pow(tanh(hidden_outputs[h]), 2.0)) * sum * input[i]; 
+				else if (hidden_func == nnwork_sigmoid)
+					ih_weights[i][h] += rate * hidden_outputs[h] * (1.0 - hidden_outputs[h]) * sum * input[i];
+				else if (hidden_func == nnwork_relu)
+					ih_weights[i][h] += rate * (hidden_outputs[h] > 0.0? 1.0: 0.01) * sum * input[i];
+				else
+					exit(-3);
 			}
 		}
 
