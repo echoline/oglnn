@@ -3,43 +3,46 @@
 #include <unistd.h>
 #include <time.h>
 #include <string.h>
-#define INPUTS 256
-#define HIDDENS 64
-#define OUTPUTS 10
-#include "nnwork.h"
+#include <stdlib.h>
+#include <fann.h>
+#define INPUTS 2
+#define HIDDENS 4 
+#define OUTPUTS 1
 #define SCREEN_WIDTH 500
 #define SCREEN_HEIGHT 500
 #define BUFSIZE 512
 
 // RGBA colors
 float neuron[] = {0.0f, 0.0f, 0.0f, 1.0f};
-float negative[] = {0.0f, 0.7f, 0.0f, 1.0f};
-float positive[] = {0.0f, 0.0f, 0.7f, 1.0f};
-float white[] = {1.0f, 1.0f, 1.0f, 1.0f};
+float negative[] = {0.0f, 1.0f, 0.0f, 1.0f};
+float positive[] = {0.0f, 0.0f, 1.0f, 1.0f};
+float text[] = {0.0f, 0.0f, 0.0f, 1.0f};
+typedef struct {
+	float	input[2];
+	float	output[1];
+} xor_t;
 
-double lambda = 1, rate = 0.25;
+xor_t xor_data[] = {
+	{ {1.0f, 1.0f}, {0.0f} },
+	{ {1.0f, -1.0f}, {1.0f} },
+	{ {-1.0f, 1.0f}, {1.0f} },
+	{ {-1.0f, -1.0f}, {0.0f} },
+	{ {1.0f, 1.0f}, {0.0f} },
+	{ {1.0f, -1.0f}, {1.0f} },
+	{ {-1.0f, 1.0f}, {1.0f} },
+	{ {-1.0f, -1.0f}, {0.0f} },
+};
+
+float lambda = 1.0, rate = 0.25;
 int speed = 1;
 int counter = 0;
 int mx, my;
 float angleX = 10, angleY = 10;
-double input[INPUTS], output[OUTPUTS];
+float input[INPUTS], output[OUTPUTS];
 int guess;
-double depth = -175.0f;
+double depth = -75.0f;
 FILE *train;
-int backwards = 0;
-
-int
-highest_output() {
-	int o, ret = -1;
-	double max = -100;
-	for (o = 0; o < OUTPUTS; o++) {
-		if (output[o] > max) {
-			max = output[o];
-			ret = o;
-		}
-	}
-	return ret;
-}
+struct fann *ann = NULL;
 
 void
 draw_text(GLint x, GLint y, char* s)
@@ -55,7 +58,7 @@ draw_text(GLint x, GLint y, char* s)
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
 	glLoadIdentity();
-	glMaterialfv(GL_FRONT, GL_EMISSION, white);
+	glMaterialfv(GL_FRONT, GL_EMISSION, text);
 	glRasterPos2i(x, y);
 	for(p = s, lines = 0; *p; p++) {
 		if (*p == '\n') {
@@ -71,7 +74,7 @@ draw_text(GLint x, GLint y, char* s)
 }
 
 void
-draw_input(GLint x, GLint y, char* input)
+Draw_input(GLint x, GLint y, char* input)
 {
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
@@ -102,32 +105,40 @@ void process_hits(GLint hits, GLuint buffer[])
 		if (y >= INPUTS*HIDDENS) {
 			h = (y - INPUTS*HIDDENS) % HIDDENS;
 			o = (y - INPUTS*HIDDENS) / HIDDENS;
-			ho_weights[h][o] = 0.0/0.0;
+			//ho_weights[h][o] = 0.0/0.0;
 		} else {
 			i = y / HIDDENS;
 			h = y % HIDDENS;
-			ih_weights[i][h] = 0.0/0.0;
+			//ih_weights[i][h] = 0.0/0.0;
 		}
 	}      
 }
 
-void draw_net(int mode, double *input, double *output) {
-	int i, h, o, id = 0, rt;
+void draw_net(int mode, float *input, float *output) {
+	int i, h, o, id = 0, rt, N;
+	struct fann_neuron *first_neuron;
+	struct fann_layer *layer_it;
+	struct fann_neuron *neuron_it;
+	struct fann_neuron *last_neuron;
+	fann_type *weights;
 	// input to hidden
 	glPushMatrix();
 	glTranslatef(0,0,depth);
 	glRotatef(angleX, 0, 1, 0);
 	glRotatef(-angleY, 1, 0, 0);
 	
-	for (i = 0; i < INPUTS; i++) {
-		for (h = 0; h < HIDDENS; h++) {
-			if (!isnormal(ih_weights[i][h]))
-				continue;
-			else if (ih_weights[i][h] < 0)
+	layer_it = ann->first_layer + 1;
+	last_neuron = layer_it->last_neuron;
+	h = 0;
+	for (neuron_it = layer_it->first_neuron; neuron_it != last_neuron; neuron_it++) {
+		N = neuron_it->last_con - neuron_it->first_con;
+		weights = ann->weights + neuron_it->first_con;
+		for (i = 0; i < N; i++) {
+			if (weights[i] < 0)
 				glMaterialfv(GL_FRONT, GL_EMISSION, negative);
 			else
 				glMaterialfv(GL_FRONT, GL_EMISSION, positive);
-			glLineWidth((int)fabs(ih_weights[i][h]));
+			glLineWidth((int)fabs(weights[i]));
 			if (mode == GL_SELECT)
 				glPushName(i*HIDDENS+h);
 			glBegin(GL_LINES);
@@ -139,17 +150,21 @@ void draw_net(int mode, double *input, double *output) {
 			if (mode == GL_SELECT)
 				glPopName();
 		}
+		h++;
 	}
 	// hidden to output
-	for (o = 0; o < OUTPUTS; o++) {
-		for (h = 0; h < HIDDENS; h++) {
-			if (!isnormal(ho_weights[h][o]))
-				continue;
-			else if (ho_weights[h][o] < 0)
+	layer_it = ann->first_layer + 2;
+	last_neuron = layer_it->last_neuron;
+	o = 0;
+	for (neuron_it = layer_it->first_neuron; neuron_it != last_neuron; neuron_it++) {
+		N = neuron_it->last_con - neuron_it->first_con;
+		weights = ann->weights + neuron_it->first_con;
+		for (h = 0; h < N; h++) {
+			if (weights[h] < 0)
 				glMaterialfv(GL_FRONT, GL_EMISSION, negative);
 			else
 				glMaterialfv(GL_FRONT, GL_EMISSION, positive);
-			glLineWidth((int)fabs(ho_weights[h][o]));
+			glLineWidth((int)fabs(weights[h]));
 			if (mode == GL_SELECT)
 				glPushName(INPUTS*HIDDENS+o*HIDDENS+h);
 			glBegin(GL_LINES);
@@ -161,12 +176,15 @@ void draw_net(int mode, double *input, double *output) {
 			if (mode == GL_SELECT)
 				glPopName();
 		}
+		o++;
 	}
 
 	// input nodes
 	rt = sqrt(INPUTS);
+	layer_it = ann->first_layer;
+	neuron_it = ann->first_layer->first_neuron;
 	for (i = 0; i < INPUTS; i++) {
-		neuron[0] = (input[i] - 1.0) / -2.0;
+		neuron[0] = neuron_it[i].value;
 		glMaterialfv(GL_FRONT, GL_EMISSION, neuron);
 		glTranslatef(((i%rt)*10.0f)-((rt-1)*5.0f), 10.0f, 10.0f*(i/rt)-(rt-1)*5.0f);
 		glutSolidSphere(1,20,20);
@@ -174,9 +192,11 @@ void draw_net(int mode, double *input, double *output) {
 	}
 
 	// hidden nodes
+	layer_it++;
+	neuron_it = layer_it->first_neuron;
 	rt = sqrt(HIDDENS);
 	for (h = 0; h < HIDDENS; h++) {
-		neuron[0] = hidden_outputs[h];
+		neuron[0] = neuron_it[h].value;
 		glMaterialfv(GL_FRONT, GL_EMISSION, neuron);
 		glTranslatef(((h%rt)*10.0f)-((rt-1)*5.0f), 0.0f, 10.0f*(h/rt)-(rt-1)*5.0f);
 		glutSolidSphere(1,20,20);
@@ -184,9 +204,11 @@ void draw_net(int mode, double *input, double *output) {
 	}
 
 	// output nodes
+	layer_it++;
+	neuron_it = layer_it->first_neuron;
 	rt = sqrt(OUTPUTS);
 	for (o = 0; o < OUTPUTS; o++) {
-		neuron[0] = output[o];
+		neuron[0] = neuron_it[o].value;
 		glMaterialfv(GL_FRONT, GL_EMISSION, neuron);
 		glTranslatef(((o%rt)*10.0f)-((rt-1)*5.0f), -10.0f, 10.0f*(o/rt)-(rt-1)*5.0f);
 		glutSolidSphere(1,20,20);
@@ -204,11 +226,7 @@ void kbd(unsigned char key, int x, int y)
 		depth--;
 	}
 	if (key == 'S') {
-		nnwork_init(time(NULL));
 		counter = 0;
-	}
-	if (key == 'b') {
-		backwards = !backwards;
 	}
 	if (key == '1') {
 		if (speed > 1) speed--;
@@ -269,82 +287,32 @@ void mmove(int x, int y) {
 
 void display(void) {
 	char buf[1024];
-	double *results;
+	float *results;
 	double error = 0;
-	int i, h, o;
-	static int outinput = 0;
+	int i, h, o, r;
 
-if (1 || !backwards) {
-	h = 0;
-	for(i = 0; !feof(train); i++) {
-		buf[i] = fgetc(train);
-		if (buf[i] == ' ') {
-			input[h++] = atof(buf);
-			if (h > 255) {
-				buf[0] = fgetc(train);
-				fgetc(train);
-				buf[1] = '\0';
-				guess = atoi(buf);
-				for (i = 0; i < 10; i++)
-					output[i] = (i == guess) ? 1.0 : 0.0;
-				break;
-			}
-			i = 0;
-		}
-	}
-	if (feof(train)) {
-		rewind(train);
-	}
+	r = counter % 4;
+	input[0] = xor_data[r].input[0];
+	input[1] = xor_data[r].input[1];
+	output[0] = xor_data[r].output[0];
 
-	results = nnwork_train(input, output, rate, lambda);
-	for (o = 0; o < sizeof(results); o++)
-		error += pow(output[o] - results[o], 2);
-} else {
-/*
-	guess = counter % 10;
-	for (i = 0; i < 10; i++)
-		output[i] = (i == guess) ? 1.0 : 0.0;
-	results = nnwork_run_backwards(output, lambda);*/
-}
+	fann_train(ann, input, output);
+	results = fann_test(ann, input, output);
+	error = pow(results[0] - output[0], 2.0) * 0.5;
 
 	counter++;
 	if (counter % speed) {
-		free(results);
+//		free(results);
 		return;
 	}
 
-	glClearColor(0.2, 0.2, 0.2, 1.0);
+	glClearColor(0.6f, 0.6f, 0.6f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	snprintf(buf, sizeof(buf)-1, "Epochs: %d\nError: %20.18lf\n"
-			"5 and 6 adjust learning rate: %f\n"
-			"3 and 4 adjust lambda: %f\n"
-			"1 and 2 adjust speed: %d\n"
-			"b to reverse direction (does not train)\n",
-			counter, error, rate, lambda, speed);
+	snprintf(buf, sizeof(buf) - 1, "Epochs: %d\nError: %20.18lf\nInput: %f xor %f\nOutput: %f\nSpeed[%04d] Lambda[%04f] Rate[%04f]", counter, error, input[0], input[1], results[0], speed, lambda, rate);
 	draw_text(0, 0, buf);
-if (!backwards) {
-	for (i = 0; i < 256; i++) {
-		buf[i*3] = -127.0;
-		buf[i*3+1] = input[i] * -127.0;
-		buf[i*3+2] = input[i] * -127.0;
-	}
-} else {
-	for (i = 0; i < 256; i++) {
-		buf[i*3] = -127.0;
-		buf[i*3+1] = results[i] * -127.0;
-		buf[i*3+2] = results[i] * -127.0;
-	}
-}
-	draw_input(SCREEN_WIDTH-31, 15, buf);
-	snprintf(buf, sizeof(buf)-1, "guess: %d\n", highest_output());
-	draw_text(SCREEN_WIDTH-(8*strlen(buf)), 0, buf);
-	if (!backwards)
-		draw_net(GL_RENDER, input, results);
-	else
-		draw_net(GL_RENDER, results, output);
-	//memcpy(&input[256], results, sizeof(double)*OUTPUTS);
-	free(results);
+	draw_net(GL_RENDER, input, results);
+	//free(results);
 
 	glFlush();
 	glutSwapBuffers();
@@ -370,19 +338,6 @@ int main(int argc, char **argv) {
 	GLfloat light_diffuse[] = { 0.5, 0.5, 0.5, 1.0 };
 	GLfloat light_specular[] = { 0.5, 0.5, 0.5, 1.0 };
 	GLfloat light_position[] = { 0.0, 6.0, -70.0, 1.0 };
-
-	hidden_func = nnwork_relu;
-	output_func = nnwork_sigmoid;
-
-	if (argc < 2) {
-		printf("please specify a training file\n");
-		return -1;
-	}
-	train = fopen(argv[1], "r");
-	if (!train) {
-		printf("unable to open training file\n");
-		return -1;
-	}
 
 	glutInit(&argc, argv);
 	glutInitWindowPosition(0, 0);
@@ -421,7 +376,13 @@ int main(int argc, char **argv) {
 
 	glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
 
-	nnwork_init(time(NULL));
+	ann = fann_create_standard(3, INPUTS, HIDDENS, OUTPUTS);
+	fann_set_activation_function_hidden(ann, FANN_LINEAR_PIECE_LEAKY);
+	fann_set_activation_function_output(ann, FANN_SIGMOID);
+	fann_set_activation_steepness_layer(ann, lambda, 1);
+	fann_set_activation_steepness_layer(ann, lambda, 2);
+	fann_set_learning_rate(ann, rate);
+	srand(time(NULL));
 
 	glutMainLoop();
 }
